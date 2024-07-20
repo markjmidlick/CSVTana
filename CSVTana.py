@@ -3,16 +3,22 @@ import pandas as pd
 from io import BytesIO
 import zipfile
 
-def csv_to_tana_paste(df):
+def csv_to_tana_paste(df, delimiter):
     tana_paste = ""
     tag_column = df.columns[0]  # Use the first column's title as the tag name
 
     for index, row in df.iterrows():
         tag = row[0]
-        tana_paste += f"- {tag} #[[{tag_column}]]\n"  # Create a Tana Paste node with the tag
+        tana_paste += f"- {tag} #{tag_column}\n"  # Create a Tana Paste node with the tag
         for col_name, value in row.items():
             if col_name != tag_column:  # Skip the tag column
-                tana_paste += f"  - {col_name}:: {value}\n"
+                if delimiter and delimiter in str(value):
+                    items = str(value).split(delimiter)
+                    tana_paste += f"  - {col_name}::\n"
+                    for item in items:
+                        tana_paste += f"    - {item.strip()}\n"
+                else:
+                    tana_paste += f"  - {col_name}:: {value}\n"
         tana_paste += "\n"
     
     return tana_paste
@@ -53,12 +59,13 @@ st.title("CSV to Tana Paste Converter")
 st.write("Upload a CSV file and convert it to Tana Paste format. The converted file will be split into multiple files if it exceeds 100k characters.")
 
 uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+delimiter = st.text_input("Enter a delimiter to split multiple items in fields (optional)")
 
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
     
     if st.button("Convert"):
-        tana_paste = csv_to_tana_paste(df)
+        tana_paste = csv_to_tana_paste(df, delimiter)
         files = split_tana_paste(tana_paste)
         
         if len(files) == 1:
