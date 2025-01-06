@@ -142,7 +142,7 @@ st.markdown(
 st.markdown(
     """
     <div style="font-size:14px; font-style:italic; color: #FFFFFF; margin-top: 10px;">
-        If you need a more customized or complex solution, reach out to me on the 
+        If you need a more customized or automated solution, reach out to me on the 
         <a href="https://tanainc.slack.com" target="_blank" style="color: #FFFFFF;">Tana Slack</a> or 
         <a href="mailto:markjmidlick@gmail.com" target="_blank" style="color: #FFFFFF;">markjmidlick@gmail.com</a>.
     </div>
