@@ -155,7 +155,8 @@ st.markdown(
     """
     <div style="font-size:14px; font-style:italic; color: #FFFFFF; margin-top: 10px;">
         If you need a more customized or automated solution, reach out to me on the 
-        <a href="https://tanainc.slack.com" target="_blank" style="color: #FFFFFF;">Tana Slack</a>
+        <a href="https://tanainc.slack.com" target="_blank" style="color: #FFFFFF;">Tana Slack</a> or 
+        <a href="https://markjmidlick.com/" target="_blank" style="color: #FFFFFF;">my website</a>.
     </div>
     """,
     unsafe_allow_html=True,
