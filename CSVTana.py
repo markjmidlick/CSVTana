@@ -90,6 +90,18 @@ st.markdown(
 )
 st.title("CSV to Tana Paste Converter")
 st.write("Created by [Mark J. Midlick](https://markjmidlick.com/)")
+st.markdown(
+    """
+    <iframe width="560" height="315" 
+    src="https://www.youtube.com/embed/1UwUOTZiOuk?si=h7Wvnc-RIiOeupkA"
+    title="YouTube video player" 
+    frameborder="0" 
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+    allowfullscreen>
+    </iframe>
+    """,
+    unsafe_allow_html=True,
+)
 st.write("---")
 st.markdown(
     """
