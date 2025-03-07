@@ -156,7 +156,7 @@ st.markdown(
     <div style="font-size:14px; font-style:italic; color: #FFFFFF; margin-top: 10px;">
         If you need a more customized or automated solution, reach out to me on the 
         <a href="https://tanainc.slack.com" target="_blank" style="color: #FFFFFF;">Tana Slack</a> or 
-        <a href="https://markjmidlick.com/" target="_blank" style="color: #FFFFFF;">my website</a>.
+        <a href="mailto:markjmidlick@gmail.com" target="_blank" style="color: #FFFFFF;">markjmidlick@gmail.com</a>.
     </div>
     """,
     unsafe_allow_html=True,
@@ -442,3 +442,93 @@ if st.button("Send CSV to Tana"):
     progress_bar = st.progress(0.0)
     send_nodes_in_batches(final_nodes, tana_token, progress_bar)
     st.success("All done! Check Tana's INBOX.")
+
+
+import re
+import pandas as pd
+
+st.write("---")
+st.header("Tana Paste to CSV Converter")
+st.write("Paste your Tana Paste below to convert it into a CSV file:")
+
+# Text area for Tana Paste input
+tana_paste_input = st.text_area("Tana Paste Input", height=300)
+def parse_tana_paste_to_csv(tana_paste):
+    import re
+
+    # Prepare to collect data
+    data = []
+    columns = set(["Name", "Tags"])
+
+    # Split the Tana Paste into lines
+    lines = tana_paste.strip().split("\n")
+    current_node = None
+    current_tags = []
+    current_data = {}
+    children = []
+
+    # Process each line
+    for line in lines:
+        line = line.rstrip()  # Remove trailing spaces
+        # Detect a new node (starts with "- ")
+        if line.startswith("- "):
+            # Save the previous node if it exists
+            if current_node:
+                if children:
+                    current_data["Children"] = ", ".join(children)
+                    columns.add("Children")
+                data.append(current_data)
+
+            # Reset for the new node
+            current_node = line[2:].strip()
+            current_tags = re.findall(r"#\[\[(.*?)\]\]|#(\w+)", current_node)
+            current_tags = [t[0] if t[0] else t[1] for t in current_tags]
+            node_name = re.sub(r"#\[\[(.*?)\]\]|#(\w+)", "", current_node).strip()
+
+            current_data = {"Name": node_name, "Tags": ", ".join(current_tags)}
+            children = []
+
+        # Detect fields with `::`
+        elif "::" in line:
+            field_name, field_value = map(str.strip, line.split("::", 1))
+            current_data[field_name] = field_value
+            columns.add(field_name)
+
+        # Detect children without `::` (indented lines)
+        elif line.startswith("  - "):
+            children.append(line[4:].strip())
+
+    # Save the last node if it exists
+    if current_node:
+        if children:
+            current_data["Children"] = ", ".join(children)
+            columns.add("Children")
+        data.append(current_data)
+
+    # Define the column order: Name, Tags, all other fields in order, Children
+    ordered_columns = ["Name", "Tags"] + [col for col in sorted(columns) if col not in ["Name", "Tags", "Children"]] + ["Children"]
+
+    # Create a DataFrame from the collected data with the correct column order
+    df = pd.DataFrame(data, columns=ordered_columns)
+    return df
+if st.button("Convert to CSV"):
+    if not tana_paste_input.strip():
+        st.warning("Please paste some Tana Paste format text first.")
+    else:
+        # Parse Tana Paste and convert to CSV
+        df = parse_tana_paste_to_csv(tana_paste_input)
+        
+        # Display the DataFrame preview
+        st.write("Preview of the converted CSV:")
+        st.dataframe(df.head(10))
+        
+        # Convert DataFrame to CSV
+        csv_data = df.to_csv(index=False).encode('utf-8')
+        
+        # Provide CSV download button
+        st.download_button(
+            label="Download CSV",
+            data=csv_data,
+            file_name="converted_from_tana_paste.csv",
+            mime="text/csv"
+        )
