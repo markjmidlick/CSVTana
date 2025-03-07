@@ -5,6 +5,7 @@ import zipfile
 import requests
 import json
 import time
+import re
 
 ##############################
 # 1. EXISTING TANA PASTE CODE
@@ -444,9 +445,6 @@ if st.button("Send CSV to Tana"):
     st.success("All done! Check Tana's INBOX.")
 
 
-import re
-import pandas as pd
-
 st.write("---")
 st.header("Tana Paste to CSV Converter")
 st.write("Paste your Tana Paste below to convert it into a CSV file:")
@@ -511,6 +509,7 @@ def parse_tana_paste_to_csv(tana_paste):
     # Create a DataFrame from the collected data with the correct column order
     df = pd.DataFrame(data, columns=ordered_columns)
     return df
+    
 if st.button("Convert to CSV"):
     if not tana_paste_input.strip():
         st.warning("Please paste some Tana Paste format text first.")
