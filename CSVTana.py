@@ -5,7 +5,6 @@ import zipfile
 import requests
 import json
 import time
-import re
 
 ##############################
 # 1. EXISTING TANA PASTE CODE
@@ -445,71 +444,80 @@ if st.button("Send CSV to Tana"):
     st.success("All done! Check Tana's INBOX.")
 
 
+import re
+import pandas as pd
+
 st.write("---")
 st.header("Tana Paste to CSV Converter")
 st.write("Paste your Tana Paste below to convert it into a CSV file:")
 
 # Text area for Tana Paste input
 tana_paste_input = st.text_area("Tana Paste Input", height=300)
+
 def parse_tana_paste_to_csv(tana_paste):
-    import re
+    import re, pandas as pd
 
-    # Prepare to collect data
     data = []
-    columns = set(["Name", "Tags"])
-
-    # Split the Tana Paste into lines
+    columns = {"Name", "Tags"}
     lines = tana_paste.strip().split("\n")
-    current_node = None
-    current_tags = []
+
     current_data = {}
-    children = []
+    children_map = {}
+    current_field = None
 
-    # Process each line
-    for line in lines:
-        line = line.rstrip()  # Remove trailing spaces
-        # Detect a new node (starts with "- ")
-        if line.startswith("- "):
-            # Save the previous node if it exists
-            if current_node:
-                if children:
-                    current_data["Children"] = ", ".join(children)
-                    columns.add("Children")
-                data.append(current_data)
+    def commit_node():
+        for field, items in children_map.items():
+            if not items:
+                continue
+            base = current_data.get(field, "")
+            combined = ([base] if base else []) + items
+            current_data[field] = "\n".join(combined)
+        if current_data:
+            data.append(current_data.copy())
 
-            # Reset for the new node
-            current_node = line[2:].strip()
-            current_tags = re.findall(r"#\[\[(.*?)\]\]|#(\w+)", current_node)
-            current_tags = [t[0] if t[0] else t[1] for t in current_tags]
-            node_name = re.sub(r"#\[\[(.*?)\]\]|#(\w+)", "", current_node).strip()
+    for raw in lines:
+        indent = len(raw) - len(raw.lstrip(" "))
+        text   = raw.lstrip(" ")
 
-            current_data = {"Name": node_name, "Tags": ", ".join(current_tags)}
-            children = []
+        # ─── new node ─────────────────────────────────────────────────────────────
+        if indent == 0 and text.startswith("- "):
+            commit_node()
+            current_data.clear()
+            children_map.clear()
+            current_field = None
 
-        # Detect fields with `::`
-        elif "::" in line:
-            field_name, field_value = map(str.strip, line.split("::", 1))
-            current_data[field_name] = field_value
-            columns.add(field_name)
+            body = text[2:]
+            tags = re.findall(r"#\[\[(.*?)\]\]|#(\w+)", body)
+            tags = [t[0] or t[1] for t in tags]
+            name = re.sub(r"#\[\[(.*?)\]\]|#(\w+)", "", body).strip()
 
-        # Detect children without `::` (indented lines)
-        elif line.startswith("  - "):
-            children.append(line[4:].strip())
+            current_data["Name"] = name
+            current_data["Tags"] = ", ".join(tags)
+            columns |= {"Name", "Tags"}
 
-    # Save the last node if it exists
-    if current_node:
-        if children:
-            current_data["Children"] = ", ".join(children)
-            columns.add("Children")
-        data.append(current_data)
+        # ─── field line ────────────────────────────────────────────────────────────
+        elif indent == 2 and "::" in text:
+            field, val = map(str.strip, text.split("::", 1))
+            current_data[field] = val
+            columns.add(field)
+            children_map[field] = []
+            current_field = field if val == "" else None
 
-    # Define the column order: Name, Tags, all other fields in order, Children
-    ordered_columns = ["Name", "Tags"] + [col for col in sorted(columns) if col not in ["Name", "Tags", "Children"]] + ["Children"]
+        # ─── nested bullet under a blank-value field ────────────────────────────────
+        elif current_field and text.startswith("- ") and indent >= 4:
+            val = text[2:].strip()
+            # <-- here’s the only change:
+            rel_indent = max(0, indent - 4)
+            children_map[current_field].append(" " * rel_indent + val)
 
-    # Create a DataFrame from the collected data with the correct column order
-    df = pd.DataFrame(data, columns=ordered_columns)
-    return df
-    
+        else:
+            current_field = None
+
+    commit_node()
+
+    ordered = ["Name", "Tags"] + sorted(c for c in columns if c not in {"Name","Tags"})
+    return pd.DataFrame(data, columns=ordered)
+
 if st.button("Convert to CSV"):
     if not tana_paste_input.strip():
         st.warning("Please paste some Tana Paste format text first.")
